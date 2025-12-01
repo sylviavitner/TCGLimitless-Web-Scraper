@@ -12,11 +12,9 @@ rarity_order = [
 
 df["rarity"] = pd.Categorical(df["rarity"], categories=rarity_order, ordered=True)
 
-plt.figure(figsize=(10,6))
-df.boxplot(column="price", by="rarity", grid=False)
-
-plt.title("Price Distribution by Card Rarity")
+df.boxplot(column="price", by="rarity", grid=False, figsize=(10,6))
 plt.suptitle("")
+plt.title("Price Distribution by Card Rarity")
 plt.xlabel("Rarity")
 plt.ylabel("Price ($)")
 plt.xticks(rotation=45)
