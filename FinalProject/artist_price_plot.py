@@ -2,41 +2,58 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("pokemon.csv")
+df["price"] = pd.to_numeric(df["price"], errors="coerce")
 
-# Visual 2: Scatter plot of top-producing illustrators and SAR card price
-df["price"] = pd.to_numeric(df["price"], errors="coerce") # get price as a numeric value
+# Filter for high rarity cards
+high_rarity_cards = df[df["rarity"].isin(["Art Rare", "Secret Rare", "Special Art Rare"])].copy()
 
-# Only include SAR cards
-special_art_rare = df[df["rarity"] == "Special Art Rare"].copy()
+# Get top n most expensive cards
+top_n = 200
+top_n_expensive = high_rarity_cards.nlargest(top_n, "price")
 
-# Groupby artist and get the ones who produced the most amount of cards (top n)
-artist_counts = special_art_rare.groupby("artist").size().reset_index(name="card_count")
-artist_counts_sorted = artist_counts.sort_values(by="card_count", ascending=False)
-top_n = 50
-artist_order = artist_counts_sorted.iloc[:top_n]["artist"].tolist() #
-artist_order.reverse() # highest SAR card count on the right
-special_art_rare = special_art_rare[special_art_rare["artist"].isin(artist_order)]
+# Get unique artists from top n and sort in order of maximum price
+artist_max_price = top_n_expensive.groupby("artist")["price"].max().sort_values()
+unique_artists = artist_max_price.index.tolist()
 
-# Create x-axis positions based on artist order
-special_art_rare["artist_cat"] = pd.Categorical(special_art_rare["artist"],
-                                                  categories=artist_order,
-                                                  ordered=True)
-special_art_rare = special_art_rare.sort_values("artist_cat")
-
-# plot
-plt.figure(figsize=(10, 6))
-scatter = plt.scatter(
-    special_art_rare["artist_cat"].cat.codes,
-    special_art_rare["price"],
-    alpha=0.6,
-    s=50
+# Create categorical artist variable for x axis
+top_n_expensive["artist_cat"] = pd.Categorical(
+    top_n_expensive["artist"],
+    categories=unique_artists,
+    ordered=True
 )
 
-# Set labels and title and display figure
-plt.xticks(range(len(artist_order)), artist_order, rotation=90, ha="right")
-plt.xlabel("Artist (ordered by number of Special Art Rare cards illustrated, least -> most)")
-plt.ylabel("Card Price ($)")
-plt.title("Special Art Rare Card Prices by Artist")
+# Assign x-positions based on artist category
+top_n_expensive["x_position"] = top_n_expensive["artist_cat"].cat.codes
+
+# Create the plot
+plt.figure(figsize=(10, 6))
+
+# Plot each rarity with its own color
+for rarity in top_n_expensive["rarity"].unique():
+    mask = top_n_expensive["rarity"] == rarity
+    plt.scatter(
+        top_n_expensive[mask]["x_position"],
+        top_n_expensive[mask]["price"],
+        label=rarity,
+        alpha=0.7,
+        s=50
+    )
+
+# Set labels and formatting
+plt.xlabel("Artist (ordered by least to most expensive card)", fontsize=11)
+plt.ylabel("Card Price ($)", fontsize=11)
+plt.title(f"Top {top_n} Most Expensive Cards by Artist")
+
+# Set x-ticks to show artist names (one per artist)
+plt.xticks(
+    range(len(unique_artists)),
+    unique_artists,
+    rotation=90,
+    ha="right",
+    fontsize=8
+)
+
+plt.legend(title="Rarity", loc="upper left")
 plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()
 plt.show()
